@@ -1,0 +1,17 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "guardclaw"
+version = "0.1.0"
+description = "GuardClaw: OpenClaw security hardening and auditing toolkit"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+guardclaw = "guardclaw.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["guardclaw"]
