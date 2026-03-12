@@ -2,16 +2,17 @@
 set -euo pipefail
 
 # Usage:
-#   ./run_guardclaw.sh <OPENCLAW_ROOT> [SKILL_FILE]
+#   ./run_guardclaw.sh [OPENCLAW_ROOT] [SKILL_FILE] [LOCK_LEVEL]
+# Example:
+#   ./run_guardclaw.sh
+#   ./run_guardclaw.sh /path/to/openclaw
+#   ./run_guardclaw.sh /path/to/openclaw ./docs/SKILL.md strict
 
-if [[ $# -lt 1 ]]; then
-  echo "Usage: $0 <OPENCLAW_ROOT> [SKILL_FILE]"
-  exit 1
-fi
-
-OPENCLAW_ROOT="$1"
-SKILL_FILE="${2:-/Users/jarvis_xyy/Desktop/SKILL.md}"
-PROJECT_ROOT="/Users/jarvis_xyy/Documents/Playground"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="${SCRIPT_DIR}"
+OPENCLAW_ROOT="${1:-${SCRIPT_DIR}}"
+SKILL_FILE="${2:-${PROJECT_ROOT}/docs/SKILL.md}"
+LOCK_LEVEL="${3:-soft}"
 VENV_PATH="${OPENCLAW_ROOT}/.venv"
 
 if [[ ! -d "${OPENCLAW_ROOT}" ]]; then
@@ -21,6 +22,11 @@ fi
 
 if [[ ! -f "${SKILL_FILE}" ]]; then
   echo "Error: SKILL file not found: ${SKILL_FILE}"
+  exit 1
+fi
+
+if [[ "${LOCK_LEVEL}" != "off" && "${LOCK_LEVEL}" != "soft" && "${LOCK_LEVEL}" != "strict" ]]; then
+  echo "Error: LOCK_LEVEL must be one of: off, soft, strict"
   exit 1
 fi
 
@@ -34,4 +40,4 @@ source "${VENV_PATH}/bin/activate"
 python3 -m pip install -U pip
 python3 -m pip install -e "${PROJECT_ROOT}"
 
-guardclaw --root "${OPENCLAW_ROOT}" all --skill-file "${SKILL_FILE}"
+guardclaw --root "${OPENCLAW_ROOT}" all --skill-file "${SKILL_FILE}" --lock-level "${LOCK_LEVEL}"

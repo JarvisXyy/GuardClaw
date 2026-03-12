@@ -1,52 +1,109 @@
 # GuardClaw
 
-GuardClaw is a native security hardening and behavior audit toolkit for OpenClaw.
+[中文文档 (README.zh-CN.md)](./README.zh-CN.md)
+
+GuardClaw is a security auditing and hardening toolkit for OpenClaw.
+
+## Quick Start (One Command)
+
+From the GuardClaw repository root:
+
+```bash
+./run_guardclaw.sh
+```
+
+The script supports auto-detection and will try runtime roots in this order:
+- `<OPENCLAW_ROOT>/.openclaw` (nested layout)
+- `<OPENCLAW_ROOT>/../.openclaw` (sibling layout)
+- `<OPENCLAW_ROOT>`
+
+Optional arguments:
+
+```bash
+./run_guardclaw.sh [OPENCLAW_ROOT] [SKILL_FILE] [LOCK_LEVEL]
+```
+
+`LOCK_LEVEL` can be `off`, `soft`, or `strict`.
+
+## Installation (Manual)
+
+### Requirements
+- Python 3.10+
+
+### Recommended (pipx, one-line)
+
+```bash
+pipx install git+https://github.com/JarvisXyy/GuardClaw.git
+```
+
+Then run:
+
+```bash
+guardclaw --help
+```
+
+### Alternative (virtual environment)
+
+```bash
+cd /path/to/GuardClaw
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install -U pip
+python3 -m pip install -e .
+```
+
+If you see `This environment is externally managed`, use a venv as shown above (recommended for Homebrew Python).
+
+## Common Usage
+
+Note: `--root` is a global option and must be placed before subcommands.
+
+```bash
+# Audit
+guardclaw --root /path/to/openclaw audit
+
+# Audit and allow external gateway scenario
+guardclaw --root /path/to/openclaw audit --allow-external-gateway
+
+# Harden (default: no forced gateway rewrite)
+guardclaw --root /path/to/openclaw harden --skill-file ./docs/SKILL.md --lock-level soft
+
+# Force gateway to local-only
+guardclaw --root /path/to/openclaw harden --enforce-gateway-local --lock-level soft
+
+# Rollback
+guardclaw --root /path/to/openclaw rollback
+
+# Unlock owner write permission for openclaw.json/.env
+guardclaw --root /path/to/openclaw unlock
+
+# One-click via CLI
+guardclaw --root /path/to/openclaw all --skill-file ./docs/SKILL.md --lock-level soft
+```
 
 ## Features
 
-- Security audit engine
-  - Gateway exposure checks from `openclaw.json`
-  - Permission audit for `openclaw.json`, `.env`, `credentials/`
+- Security audit
+  - Gateway exposure checks (`mode/bind` and `host` schemas)
+  - Permission checks for `openclaw.json`, `.env`, `credentials/`
   - Skill SAST scan for `skills/**/*.py` and `skills/**/*.sh`
-  - Workspace isolation validation for `workspaces/workspace-*`
-  - Colored console table + `audit_report.json`
+  - Workspace isolation checks for both:
+    - multi-workspace: `workspace/workspace-*`
+    - single-workspace: `workspace/SOUL.md` or `workspace/AGENT_RULES.md`
 - Automated hardening
-  - Force `gateway.host = 127.0.0.1`
-  - Lock permissions on sensitive files
-  - Inject GuardClaw system rules into workspace `AGENT_RULES.md` or `SOUL.md`
-  - Readonly lock for validated config files
+  - Optional local-only gateway enforcement (`--enforce-gateway-local`)
+  - Rule injection into workspace rule files
+  - Permission tightening with lock levels: `off | soft | strict`
   - Atomic backup and rollback
 - Behavioral tracking
-  - Tool call audit log with timestamp (milliseconds), bot id, tool name, args, status
+  - Tool-call logging with millisecond timestamps
   - Sensitive path warnings (`/etc/`, `C:\\Windows\\`, `../`)
 
-## Install
+## Output Paths
 
-```bash
-pip install -e .
-```
+GuardClaw resolves runtime root automatically, then writes outputs inside that runtime root.
 
-## Usage
-
-```bash
-guardclaw audit --root /path/to/openclaw-root
-
-guardclaw harden --root /path/to/openclaw-root --skill-file /path/to/SKILL.md
-
-guardclaw harden --root /path/to/openclaw-root --lock-level soft --allow-external-gateway
-
-guardclaw rollback --root /path/to/openclaw-root
-
-guardclaw unlock --root /path/to/openclaw-root
-
-guardclaw track --root /path/to/openclaw-root --bot-id bot-1 --tool-name fs.read --status success --input-args '{"path":"/etc/passwd"}'
-
-guardclaw all --root /path/to/openclaw-root --skill-file /path/to/SKILL.md --lock-level soft
-```
-
-## Outputs
-
-- Audit report: `/path/to/openclaw-root/audit_report.json`
-- Backups: `/path/to/openclaw-root/.guardclaw/backups/<snapshot-id>/`
-- Tool logs: `/path/to/openclaw-root/.guardclaw/logs/tool_calls.log`
-- Installed system rule: `/path/to/openclaw-root/openclaw_system_rules/guardclaw-unified-rules/SKILL.md`
+- Audit report: `<display-root>/audit_report.json`
+- Backups: `<runtime-root>/.guardclaw/backups/<snapshot-id>/`
+- Tool logs: `<runtime-root>/.guardclaw/logs/tool_calls.log`
+- Installed system rule: `<runtime-root>/openclaw_system_rules/guardclaw-unified-rules/SKILL.md`
