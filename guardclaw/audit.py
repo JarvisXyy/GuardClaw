@@ -32,6 +32,7 @@ def run_audit(
 ) -> AuditReport:
     findings: list[Finding] = []
     findings.extend(_audit_gateway(runtime_root, allow_external_gateway))
+    findings.extend(_audit_message_queue(runtime_root))
     findings.extend(_audit_permissions(runtime_root))
     findings.extend(_audit_skills(runtime_root))
     findings.extend(_audit_workspace_isolation(runtime_root))
@@ -112,6 +113,39 @@ def _audit_gateway(runtime_root: Path, allow_external_gateway: bool) -> list[Fin
             )
         )
 
+    return findings
+
+
+def _audit_message_queue(runtime_root: Path) -> list[Finding]:
+    findings: list[Finding] = []
+    config = runtime_root / "openclaw.json"
+    if not config.exists():
+        findings.append(Finding("消息队列策略", "中", "未找到 openclaw.json，无法校验 messages.queue.mode。"))
+        return findings
+
+    try:
+        payload = json.loads(config.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        findings.append(Finding("消息队列策略", "高", f"openclaw.json 不是合法 JSON：{exc}"))
+        return findings
+
+    if not isinstance(payload, dict):
+        findings.append(Finding("消息队列策略", "中", "openclaw.json 顶层结构异常，无法校验消息队列。"))
+        return findings
+
+    messages_cfg = payload.get("messages", {})
+    queue_cfg = messages_cfg.get("queue", {}) if isinstance(messages_cfg, dict) else {}
+    mode = str(queue_cfg.get("mode", "")).strip().lower() if isinstance(queue_cfg, dict) else ""
+
+    if mode == "interrupt":
+        findings.append(Finding("消息队列策略", "信息", "messages.queue.mode 已设置为 interrupt。"))
+        return findings
+
+    if mode:
+        findings.append(Finding("消息队列策略", "中", f"messages.queue.mode 当前为 {mode}，建议改为 interrupt 以支持即时打断。"))
+        return findings
+
+    findings.append(Finding("消息队列策略", "中", "未显式配置 messages.queue.mode，默认 collect；建议设置为 interrupt。"))
     return findings
 
 

@@ -46,6 +46,7 @@ def run_hardening(
             allow_external_gateway=allow_external_gateway,
         )
     )
+    result.changed_files.extend(_ensure_interrupt_queue(root, result.messages))
     result.changed_files.extend(_lock_permissions(root, result.messages))
 
     if skill_source:
@@ -142,6 +143,52 @@ def _write_json(path: Path, payload: dict) -> None:
         mode = stat.S_IMODE(path.stat().st_mode)
         os.chmod(path, mode | stat.S_IWUSR)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _ensure_interrupt_queue(root: Path, messages: list[str]) -> list[Path]:
+    config = root / "openclaw.json"
+    if not config.exists():
+        return []
+
+    data = json.loads(config.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        messages.append("openclaw.json 顶层结构异常，已跳过消息队列加固。")
+        return []
+
+    messages_cfg = data.get("messages")
+    if messages_cfg is None:
+        data["messages"] = {"queue": {"mode": "interrupt"}}
+        _write_json(config, data)
+        messages.append("检测到未配置 messages.queue，已自动设置 queue.mode=interrupt。")
+        return [config]
+
+    if not isinstance(messages_cfg, dict):
+        messages.append("messages 字段不是对象，已跳过消息队列加固。")
+        return []
+
+    queue_cfg = messages_cfg.get("queue")
+    if queue_cfg is None:
+        messages_cfg["queue"] = {"mode": "interrupt"}
+        data["messages"] = messages_cfg
+        _write_json(config, data)
+        messages.append("检测到未配置 messages.queue，已自动设置 queue.mode=interrupt。")
+        return [config]
+
+    if not isinstance(queue_cfg, dict):
+        messages.append("messages.queue 字段不是对象，已跳过消息队列加固。")
+        return []
+
+    # 用户已显式配置队列策略时不覆盖，避免误改现有运行策略
+    if "mode" in queue_cfg:
+        messages.append(f"已检测到 queue.mode={queue_cfg.get('mode')}，保持用户配置不变。")
+        return []
+
+    queue_cfg["mode"] = "interrupt"
+    messages_cfg["queue"] = queue_cfg
+    data["messages"] = messages_cfg
+    _write_json(config, data)
+    messages.append("queue.mode 未设置，已自动补全为 interrupt。")
+    return [config]
 
 
 def _lock_permissions(root: Path, messages: list[str]) -> list[Path]:

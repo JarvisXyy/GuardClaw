@@ -92,6 +92,7 @@ guardclaw --root /path/to/openclaw all --skill-file ./docs/SKILL.md --lock-level
     - 单工作区：`workspace/SOUL.md` 或 `workspace/AGENT_RULES.md`
 - 自动化加固
   - 可选强制本地网关（`--enforce-gateway-local`）
+  - 当未配置消息队列时，自动补全 `messages.queue.mode=interrupt`
   - 规则注入到工作区规则文件
   - 三档权限锁策略：`off | soft | strict`
   - 原子备份与回滚

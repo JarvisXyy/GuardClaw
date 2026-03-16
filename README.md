@@ -92,6 +92,7 @@ guardclaw --root /path/to/openclaw all --skill-file ./docs/SKILL.md --lock-level
     - single-workspace: `workspace/SOUL.md` or `workspace/AGENT_RULES.md`
 - Automated hardening
   - Optional local-only gateway enforcement (`--enforce-gateway-local`)
+  - Auto-set `messages.queue.mode=interrupt` when queue is not configured
   - Rule injection into workspace rule files
   - Permission tightening with lock levels: `off | soft | strict`
   - Atomic backup and rollback
